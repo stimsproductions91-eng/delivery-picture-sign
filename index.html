@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Intake Form - Smart Workflow</title>
+    <title>RHD Delivery - Intake Form</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -16,6 +16,17 @@
         }
         h1, h2, h3 { text-align: center; margin-top: 0; }
         
+        /* Global Logo Header */
+        .global-header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .app-logo {
+            max-width: 220px; /* Keeps it reasonably sized on phones */
+            width: 100%;
+            height: auto;
+        }
+
         .screen { display: none; }
         .screen.active { display: block; }
 
@@ -200,7 +211,7 @@
             max-width: 400px;
         }
         button {
-            background-color: #0056b3;
+            background-color: #1c3654; /* Updated to match RHD Blue */
             color: white;
             border: none;
             padding: 12px 18px; 
@@ -210,11 +221,11 @@
             font-weight: bold;
             flex: 1; 
         }
-        button:hover { background-color: #004494; }
+        button:hover { background-color: #122438; }
         button.btn-danger { background-color: #dc3545; }
         button.btn-danger:hover { background-color: #c82333; }
-        button.btn-success { background-color: #28a745; }
-        button.btn-success:hover { background-color: #218838; }
+        button.btn-success { background-color: #fca311; color: #1c3654; } /* Updated to match RHD Orange */
+        button.btn-success:hover { background-color: #e08e0b; }
         button.btn-secondary { background-color: #6c757d; color: white; }
         
         button.full-width {
@@ -229,7 +240,9 @@
             font-size: 18px;
             margin-bottom: 30px;
             max-width: 400px;
-            box-shadow: 0 4px 6px rgba(40, 167, 69, 0.3);
+            box-shadow: 0 4px 6px rgba(252, 163, 17, 0.3);
+            background-color: #fca311;
+            color: #1c3654;
         }
 
         .empty-state {
@@ -241,6 +254,10 @@
     </style>
 </head>
 <body>
+
+    <div class="global-header">
+        <img src="Delivery.png" alt="RHD Delivery" class="app-logo">
+    </div>
 
     <div id="screen-dashboard" class="screen active">
         <div class="nav-bar">
@@ -395,16 +412,14 @@
 
         // Render Dashboard & Active Banner
         function renderDashboard() {
-            // Update Active Shift Banner
             if (activeRoute && activeTruck) {
                 document.getElementById('active-banner-text').textContent = `Route: ${activeRoute} | Truck: ${activeTruck}`;
-                document.getElementById('active-banner').style.backgroundColor = '#e0f2fe'; // Light blue to show it's active
+                document.getElementById('active-banner').style.backgroundColor = '#e0f2fe'; 
             } else {
                 document.getElementById('active-banner-text').textContent = "No Shift Set";
                 document.getElementById('active-banner').style.backgroundColor = '#f1f5f9';
             }
 
-            // Render Cards
             dashboardList.innerHTML = '';
             if (records.length === 0) {
                 dashboardList.innerHTML = '<div class="empty-state">No records yet. Click "+ New Stop" to start.</div>';
@@ -442,32 +457,25 @@
         }
 
         // --- Navigation Flow ---
-
-        // Tapping "+ New Stop"
         btnNewIntake.addEventListener('click', () => {
-            // Clear location fields for a new stop
             document.getElementById('loc-name').value = '';
             document.getElementById('loc-address').value = '';
 
-            // If shift is already set, SKIP step 1
             if (activeRoute && activeTruck) {
                 showScreen('screen-location');
             } else {
-                // If no shift is set, go to step 1
                 document.getElementById('route-num').value = '';
                 document.getElementById('truck-num').value = '';
                 showScreen('screen-details');
             }
         });
 
-        // Tapping "Change" on the dashboard banner
         btnChangeShift.addEventListener('click', () => {
             document.getElementById('route-num').value = activeRoute;
             document.getElementById('truck-num').value = activeTruck;
             showScreen('screen-details');
         });
 
-        // Step 1 -> Step 2
         document.getElementById('next-to-location-btn').addEventListener('click', () => {
             const tempRoute = document.getElementById('route-num').value.trim();
             const tempTruck = document.getElementById('truck-num').value.trim();
@@ -477,19 +485,16 @@
                 return;
             }
 
-            // Save active shift globally and in local storage
             activeRoute = tempRoute;
             activeTruck = tempTruck;
             localStorage.setItem('active_route', activeRoute);
             localStorage.setItem('active_truck', activeTruck);
 
-            // Clear location fields and go to step 2
             document.getElementById('loc-name').value = '';
             document.getElementById('loc-address').value = '';
             showScreen('screen-location');
         });
 
-        // Step 2 -> Step 3
         let currentName = '', currentAddress = '';
         document.getElementById('next-to-capture-btn').addEventListener('click', () => {
             currentName = document.getElementById('loc-name').value.trim();
@@ -500,12 +505,10 @@
                 return;
             }
 
-            // Update Summary Text with the Persistent Active Route/Truck
             document.getElementById('details-summary').innerHTML = 
                 `<strong>Route: ${activeRoute} | Truck: ${activeTruck}</strong><br>
                  ${currentName} - ${currentAddress}`;
             
-            // Reset Capture screen state
             ctx.fillStyle = "#ffffff";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             photoResult.style.display = 'none';
