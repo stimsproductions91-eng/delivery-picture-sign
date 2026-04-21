@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Intake Form - Full Workflow</title>
+    <title>Intake Form - Smart Workflow</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -24,9 +24,32 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             padding-bottom: 10px;
             border-bottom: 2px solid #ddd;
+        }
+
+        /* Active Route Banner */
+        .active-banner {
+            background: #e2e8f0;
+            border: 1px solid #cbd5e1;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .active-banner-text {
+            font-size: 14px;
+            font-weight: bold;
+            color: #0f172a;
+        }
+        .active-banner-sub {
+            font-size: 12px;
+            color: #64748b;
+            font-weight: normal;
         }
 
         .container {
@@ -222,18 +245,28 @@
     <div id="screen-dashboard" class="screen active">
         <div class="nav-bar">
             <h2>Route History</h2>
-            <button id="btn-new-intake" class="btn-success" style="flex: none; padding: 10px 15px;">+ New</button>
+            <button id="btn-new-intake" class="btn-success" style="flex: none; padding: 10px 15px;">+ New Stop</button>
         </div>
+        
+        <div class="active-banner" id="active-banner">
+            <div>
+                <div class="active-banner-sub">Current Shift</div>
+                <div class="active-banner-text" id="active-banner-text">No Route Set</div>
+            </div>
+            <button id="btn-change-shift" class="btn-secondary" style="flex: none; padding: 8px 12px; font-size: 14px; margin: 0;">Change</button>
+        </div>
+
         <div id="dashboard-list">
             </div>
     </div>
 
     <div id="screen-details" class="screen">
         <div class="nav-bar">
-            <h2>Step 1: Job Details</h2>
+            <h2>Step 1: Shift Setup</h2>
             <button class="btn-secondary btn-home" style="flex: none; padding: 10px 15px;">Cancel</button>
         </div>
         <div class="container">
+            <p style="color: #666; margin-bottom: 20px;">You only need to enter this once per shift.</p>
             <div class="form-group">
                 <label for="route-num">Route Number</label>
                 <input type="text" id="route-num" placeholder="e.g., 430" required>
@@ -242,7 +275,7 @@
                 <label for="truck-num">Truck Number</label>
                 <input type="text" id="truck-num" placeholder="e.g., 23-3" required>
             </div>
-            <button id="next-to-location-btn" class="full-width">Next: Location</button>
+            <button id="next-to-location-btn" class="full-width">Save & Continue</button>
         </div>
     </div>
 
@@ -328,6 +361,10 @@
     <script>
         // --- Database (Local Storage) Logic ---
         let records = JSON.parse(localStorage.getItem('intake_records')) || [];
+        
+        // Active Shift Memory
+        let activeRoute = localStorage.getItem('active_route') || '';
+        let activeTruck = localStorage.getItem('active_truck') || '';
 
         function saveRecordsToStorage() {
             try {
@@ -354,20 +391,23 @@
         // --- Dashboard Logic ---
         const dashboardList = document.getElementById('dashboard-list');
         const btnNewIntake = document.getElementById('btn-new-intake');
+        const btnChangeShift = document.getElementById('btn-change-shift');
 
-        btnNewIntake.addEventListener('click', () => {
-            // Clear all fields for a new entry
-            document.getElementById('route-num').value = '';
-            document.getElementById('truck-num').value = '';
-            document.getElementById('loc-name').value = '';
-            document.getElementById('loc-address').value = '';
-            showScreen('screen-details');
-        });
-
+        // Render Dashboard & Active Banner
         function renderDashboard() {
+            // Update Active Shift Banner
+            if (activeRoute && activeTruck) {
+                document.getElementById('active-banner-text').textContent = `Route: ${activeRoute} | Truck: ${activeTruck}`;
+                document.getElementById('active-banner').style.backgroundColor = '#e0f2fe'; // Light blue to show it's active
+            } else {
+                document.getElementById('active-banner-text').textContent = "No Shift Set";
+                document.getElementById('active-banner').style.backgroundColor = '#f1f5f9';
+            }
+
+            // Render Cards
             dashboardList.innerHTML = '';
             if (records.length === 0) {
-                dashboardList.innerHTML = '<div class="empty-state">No records yet. Click "+ New" to start.</div>';
+                dashboardList.innerHTML = '<div class="empty-state">No records yet. Click "+ New Stop" to start.</div>';
                 return;
             }
 
@@ -377,7 +417,6 @@
                 const card = document.createElement('div');
                 card.className = 'record-card';
                 
-                // Fallbacks in case old records don't have name/address yet
                 const recName = record.name || "No Name Provided";
                 const recAddress = record.address || "No Address Provided";
 
@@ -401,6 +440,84 @@
                 dashboardList.appendChild(card);
             });
         }
+
+        // --- Navigation Flow ---
+
+        // Tapping "+ New Stop"
+        btnNewIntake.addEventListener('click', () => {
+            // Clear location fields for a new stop
+            document.getElementById('loc-name').value = '';
+            document.getElementById('loc-address').value = '';
+
+            // If shift is already set, SKIP step 1
+            if (activeRoute && activeTruck) {
+                showScreen('screen-location');
+            } else {
+                // If no shift is set, go to step 1
+                document.getElementById('route-num').value = '';
+                document.getElementById('truck-num').value = '';
+                showScreen('screen-details');
+            }
+        });
+
+        // Tapping "Change" on the dashboard banner
+        btnChangeShift.addEventListener('click', () => {
+            document.getElementById('route-num').value = activeRoute;
+            document.getElementById('truck-num').value = activeTruck;
+            showScreen('screen-details');
+        });
+
+        // Step 1 -> Step 2
+        document.getElementById('next-to-location-btn').addEventListener('click', () => {
+            const tempRoute = document.getElementById('route-num').value.trim();
+            const tempTruck = document.getElementById('truck-num').value.trim();
+
+            if (!tempRoute || !tempTruck) {
+                alert("Please enter both Route and Truck numbers.");
+                return;
+            }
+
+            // Save active shift globally and in local storage
+            activeRoute = tempRoute;
+            activeTruck = tempTruck;
+            localStorage.setItem('active_route', activeRoute);
+            localStorage.setItem('active_truck', activeTruck);
+
+            // Clear location fields and go to step 2
+            document.getElementById('loc-name').value = '';
+            document.getElementById('loc-address').value = '';
+            showScreen('screen-location');
+        });
+
+        // Step 2 -> Step 3
+        let currentName = '', currentAddress = '';
+        document.getElementById('next-to-capture-btn').addEventListener('click', () => {
+            currentName = document.getElementById('loc-name').value.trim();
+            currentAddress = document.getElementById('loc-address').value.trim();
+
+            if (!currentName || !currentAddress) {
+                alert("Please enter the Location Name and Address.");
+                return;
+            }
+
+            // Update Summary Text with the Persistent Active Route/Truck
+            document.getElementById('details-summary').innerHTML = 
+                `<strong>Route: ${activeRoute} | Truck: ${activeTruck}</strong><br>
+                 ${currentName} - ${currentAddress}`;
+            
+            // Reset Capture screen state
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            photoResult.style.display = 'none';
+            video.style.display = 'block';
+            captureBtn.style.display = 'block';
+            retakeBtn.style.display = 'none';
+            photoTaken = false;
+
+            showScreen('screen-capture');
+            startWebcam();
+        });
+
 
         // --- Edit & Delete Logic ---
         window.openEdit = function(id) {
@@ -441,49 +558,6 @@
                 renderDashboard();
             }
         };
-
-        // --- Navigation Flow Logic ---
-        let currentRoute = '', currentTruck = '', currentName = '', currentAddress = '';
-
-        // Details -> Location
-        document.getElementById('next-to-location-btn').addEventListener('click', () => {
-            currentRoute = document.getElementById('route-num').value.trim();
-            currentTruck = document.getElementById('truck-num').value.trim();
-
-            if (!currentRoute || !currentTruck) {
-                alert("Please enter both Route and Truck numbers.");
-                return;
-            }
-            showScreen('screen-location');
-        });
-
-        // Location -> Capture
-        document.getElementById('next-to-capture-btn').addEventListener('click', () => {
-            currentName = document.getElementById('loc-name').value.trim();
-            currentAddress = document.getElementById('loc-address').value.trim();
-
-            if (!currentName || !currentAddress) {
-                alert("Please enter the Location Name and Address.");
-                return;
-            }
-
-            // Update Summary Text
-            document.getElementById('details-summary').innerHTML = 
-                `<strong>Route: ${currentRoute} | Truck: ${currentTruck}</strong><br>
-                 ${currentName} - ${currentAddress}`;
-            
-            // Reset Capture screen state
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            photoResult.style.display = 'none';
-            video.style.display = 'block';
-            captureBtn.style.display = 'block';
-            retakeBtn.style.display = 'none';
-            photoTaken = false;
-
-            showScreen('screen-capture');
-            startWebcam();
-        });
 
         // --- Signature Logic ---
         const canvas = document.getElementById('signature-pad');
@@ -613,8 +687,8 @@
             
             records.push({
                 id: timestamp,
-                route: currentRoute,
-                truck: currentTruck,
+                route: activeRoute,
+                truck: activeTruck,
                 name: currentName,
                 address: currentAddress,
                 sigThumb: sigThumb,
@@ -622,8 +696,8 @@
             });
             saveRecordsToStorage();
 
-            const safeRoute = currentRoute.replace(/[^a-z0-9]/gi, '_');
-            const safeTruck = currentTruck.replace(/[^a-z0-9]/gi, '_');
+            const safeRoute = activeRoute.replace(/[^a-z0-9]/gi, '_');
+            const safeTruck = activeTruck.replace(/[^a-z0-9]/gi, '_');
             
             downloadImage(sigHighRes, `Signature_R-${safeRoute}_T-${safeTruck}_${timestamp}.jpg`);
             
