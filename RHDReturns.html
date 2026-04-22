@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RHD Digital Returns Form - App Flow</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 15px;
+            overscroll-behavior-y: contain; 
+        }
+        
+        .form-container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        /* Global Header */
+        .global-header {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .app-logo {
+            max-width: 220px; 
+            width: 100%;
+            height: auto;
+        }
+        .company-address {
+            font-size: 12px;
+            color: #555;
+            margin-top: 5px;
+            line-height: 1.4;
+        }
+
+        /* Screen Navigation Logic */
+        .screen { display: none; }
+        .screen.active { display: block; }
+
+        .nav-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #1c3654;
+        }
+        .nav-bar h2 { margin: 0; color: #1c3654; font-size: 1.2rem; }
+
+        /* Form Inputs */
+        .input-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            font-weight: bold;
+            margin-right: 10px;
+            white-space: nowrap;
+            color: #444;
+        }
+        .input-line {
+            flex-grow: 1;
+            border: none;
+            border-bottom: 1px solid #ccc;
+            padding: 8px 5px;
+            font-size: 16px;
+            background: transparent;
+            border-radius: 0;
+            width: 100%;
+        }
+        .input-line:focus {
+            outline: none;
+            border-bottom: 2px solid #fca311;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        @media (max-width: 600px) {
+            .meta-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Table Area */
+        .table-responsive {
+            overflow-x: auto;
+            margin-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 5px;
+            text-align: left;
+        }
+        th {
+            background-color: #1c3654;
+            color: white;
+            font-size: 13px;
+            padding: 8px;
+        }
+        td input {
+            width: 100%;
+            border: none;
+            padding: 10px 5px;
+            box-sizing: border-box;
+            font-size: 14px;
+            background: transparent;
+        }
+        td input:focus { outline: 2px solid #fca311; }
+        
+        .col-num { width: 25%; }
+        .col-desc { width: 55%; }
+        .col-qty { width: 20%; }
+
+        /* Photo Area */
+        .photo-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        video {
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            background-color: #000;
+            width: 100%;
+            max-width: 500px;
+            object-fit: cover;
+        }
+        img.preview-img {
+            margin-top: 10px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 500px;
+            display: none;
+        }
+
+        /* Signature Area */
+        .signature-section { text-align: center; }
+        canvas.sig-canvas {
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            background-color: #fafafa;
+            width: 100%;
+            max-width: 500px;
+            height: 150px;
+            touch-action: none;
+        }
+
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        button {
+            padding: 14px 18px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            flex: 1;
+            text-align: center;
+        }
+        .btn-primary { background-color: #1c3654; color: white; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        .btn-success { background-color: #fca311; color: #1c3654; box-shadow: 0 4px 6px rgba(252, 163, 17, 0.3); }
+
+        /* -------------------------------------
+           PRINT STYLES: Stitches it all back together
+           ------------------------------------- */
+        @media print {
+            body { background: white; padding: 0; font-size: 12pt; }
+            .form-container { box-shadow: none; padding: 0; margin: 0; }
+            
+            /* Force ALL screens to show at once for the PDF */
+            .screen { display: block !important; margin-bottom: 20px; }
+            
+            /* Hide app-like elements and camera controls */
+            .nav-bar, .btn-group, button, #webcam { display: none !important; }
+            .input-line { border-bottom: 1px solid #000 !important; }
+            td input { border: none !important; outline: none !important; }
+            
+            /* Shrink table slightly to fit page */
+            table { min-width: 100%; }
+            th { background-color: #ddd !important; color: #000 !important; }
+
+            /* Ensure the photo prints nicely */
+            .preview-img { margin: 0 auto; display: block; max-width: 100%; page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="global-header">
+        <img src="RHDReturns.png" alt="RHD Returns" class="app-logo">
+        <div class="company-address">
+            <strong>R H D, Inc.</strong><br>
+            3334 Mesilla Ct. | Indianapolis, IN 46226<br>
+            (317) 981-3750 | Fax: (317) 981-3751
+        </div>
+    </div>
+
+    <div class="form-container">
+
+        <div id="screen-details" class="screen active">
+            <div class="nav-bar">
+                <h2>Step 1: Order Details</h2>
+            </div>
+
+            <div class="meta-grid">
+                <div>
+                    <div class="input-group">
+                        <label>Sold To:</label>
+                        <input type="text" class="input-line">
+                    </div>
+                </div>
+                <div>
+                    <div class="input-group">
+                        <label>Date:</label>
+                        <input type="date" class="input-line">
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn-primary" onclick="showScreen('screen-items')">Next: Enter Items ➔</button>
+            </div>
+        </div>
+
+        <div id="screen-items" class="screen">
+            <div class="nav-bar">
+                <h2>Step 2: Line Items</h2>
+            </div>
+
+            <p style="font-size: 13px; color: #666; margin-top: 0;">Enter the items being returned below.</p>
+
+            <div class="table-responsive">
+                <table id="item-table">
+                    <thead>
+                        <tr>
+                            <th class="col-num">No. of Originals</th>
+                            <th class="col-desc">Description</th>
+                            <th class="col-qty">Qty</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><input type="text"></td>
+                            <td><input type="text"></td>
+                            <td><input type="number" class="qty" min="0" step="1"></td>
+                        </tr>
+                        <tr>
+                            <td><input type="text"></td>
+                            <td><input type="text"></td>
+                            <td><input type="number" class="qty" min="0" step="1"></td>
+                        </tr>
+                        <tr>
+                            <td><input type="text"></td>
+                            <td><input type="text"></td>
+                            <td><input type="number" class="qty" min="0" step="1"></td>
+                        </tr>
+                        <tr>
+                            <td><input type="text"></td>
+                            <td><input type="text"></td>
+                            <td><input type="number" class="qty" min="0" step="1"></td>
+                        </tr>
+                        <tr>
+                            <td><input type="text"></td>
+                            <td><input type="text"></td>
+                            <td><input type="number" class="qty" min="0" step="1"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn-secondary" onclick="showScreen('screen-details')" style="flex: 0.5;">Back</button>
+                <button class="btn-primary" onclick="showScreen('screen-photo')">Next: Photo ➔</button>
+            </div>
+        </div>
+
+        <div id="screen-photo" class="screen">
+            <div class="nav-bar">
+                <h2>Step 3: Capture Returns</h2>
+            </div>
+            
+            <p style="font-size: 13px; color: #666; margin-top: 0; text-align: center;">Take a photo of the returned items.</p>
+
+            <div class="photo-area">
+                <video id="webcam" autoplay playsinline muted></video>
+                <canvas id="photo-canvas" style="display:none;"></canvas>
+                <img id="photo-result" class="preview-img" alt="Captured Photo">
+                
+                <div class="btn-group" style="width: 100%; max-width: 500px;">
+                    <button class="btn-primary" id="capture-photo">Take Photo</button>
+                    <button class="btn-danger" id="retake-photo" style="display:none;">Retake</button>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn-secondary" onclick="showScreen('screen-items')" style="flex: 0.5;">Back</button>
+                <button class="btn-primary" onclick="showScreen('screen-signature')">Next: Sign & Finish ➔</button>
+            </div>
+        </div>
+
+        <div id="screen-signature" class="screen">
+            <div class="nav-bar">
+                <h2>Step 4: Signature</h2>
+            </div>
+
+            <div class="signature-section">
+                <label style="text-align: left; display: block; margin-bottom: 5px;">Received By:</label>
+                <canvas id="signature-pad" class="sig-canvas"></canvas>
+                
+                <div class="btn-group" style="margin-bottom: 30px;">
+                    <button class="btn-danger" id="clear-signature">Clear Signature</button>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn-secondary" onclick="showScreen('screen-photo')" style="flex: 0.3;">Back</button>
+                <button class="btn-success" onclick="window.print()">🖨️ Print / Save as PDF</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let photoTaken = false;
+
+        // --- Navigation Logic ---
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+            
+            // Manage Camera state
+            if (screenId === 'screen-photo') {
+                if(!photoTaken) startWebcam();
+            } else {
+                stopWebcam();
+            }
+
+            // Fix canvas sizing bug if it was hidden when the page loaded
+            if (screenId === 'screen-signature') {
+                resizeCanvas();
+            }
+            window.scrollTo(0, 0); // Scroll to top when changing screens
+        }
+
+        // --- Webcam Logic ---
+        const video = document.getElementById('webcam');
+        const photoCanvas = document.getElementById('photo-canvas');
+        const photoCtx = photoCanvas.getContext('2d');
+        const photoResult = document.getElementById('photo-result');
+        const captureBtn = document.getElementById('capture-photo');
+        const retakeBtn = document.getElementById('retake-photo');
+        let currentStream = null;
+
+        async function startWebcam() {
+            const constraints = { video: { facingMode: { ideal: "environment" } }, audio: false };
+            try {
+                currentStream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = currentStream;
+                video.onloadedmetadata = () => video.play();
+            } catch (err) {
+                console.error("Camera Error:", err);
+                alert("Unable to access the camera. Ensure you are on a secure connection (HTTPS).");
+            }
+        }
+
+        function stopWebcam() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+        }
+
+        captureBtn.addEventListener('click', () => {
+            photoCanvas.width = video.videoWidth;
+            photoCanvas.height = video.videoHeight;
+            photoCtx.drawImage(video, 0, 0, photoCanvas.width, photoCanvas.height);
+            
+            photoResult.src = photoCanvas.toDataURL('image/jpeg', 0.8);
+            photoResult.style.display = 'block';
+            video.style.display = 'none'; 
+            
+            captureBtn.style.display = 'none';
+            retakeBtn.style.display = 'block';
+            photoTaken = true;
+        });
+
+        retakeBtn.addEventListener('click', () => {
+            photoResult.style.display = 'none';
+            video.style.display = 'block'; 
+            captureBtn.style.display = 'block';
+            retakeBtn.style.display = 'none';
+            photoTaken = false;
+        });
+
+        // --- Signature Pad Logic ---
+        const canvas = document.getElementById('signature-pad');
+        const ctx = canvas.getContext('2d');
+        const clearBtn = document.getElementById('clear-signature');
+        let isDrawing = false;
+
+        function resizeCanvas() {
+            if(!document.getElementById('screen-signature').classList.contains('active')) return;
+            
+            const rect = canvas.parentElement.getBoundingClientRect();
+            const tempImg = canvas.toDataURL(); 
+
+            canvas.width = Math.min(rect.width, 500);
+            canvas.height = 150;
+            
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+
+            const img = new Image();
+            img.src = tempImg;
+            img.onload = () => ctx.drawImage(img, 0, 0);
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        function getCoordinates(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+
+        function startDrawing(e) { isDrawing = true; draw(e); }
+        function stopDrawing() { isDrawing = false; ctx.beginPath(); }
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault(); 
+            const { x, y } = getCoordinates(e);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseout', stopDrawing);
+        canvas.addEventListener('touchstart', startDrawing, { passive: false });
+        canvas.addEventListener('touchend', stopDrawing);
+        canvas.addEventListener('touchmove', draw, { passive: false });
+
+        clearBtn.addEventListener('click', () => {
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        });
+    </script>
+</body>
+</html>
